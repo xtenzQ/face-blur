@@ -18,11 +18,12 @@ paths:
 
 - Pixelate = draw the Region into a small canvas (`imageSmoothingEnabled = true`), then back up with `imageSmoothingEnabled = false`. Block size
   comes from `pixelBlockSize()` in `src/mask/geometry.ts`, never a hardcoded pixel count, so it scales with the face size.
-- Blur = `ctx.filter = 'blur(Npx)'` where N comes from `blurRadius()`. **Reset `ctx.filter = 'none'` right after the draw**: a filter left on a
-  context also blurs the later `destination-in` mask composite, which made strong blurs come out translucent. Draw the source with a margin equal to the radius around the Region and
-  clip, so the edge of the blur does not pick up transparent black.
-- The Region shape becomes an alpha mask (`applyShapeAlpha`): the shape is dilated outward by the feather radius and then blurred, so the whole
-  Region stays fully covered and the soft edge lies outside the box. Never blur the un-dilated shape: half the fade would eat into the Region and a
+- Blur = progressive downscale→upscale resampling (`resampleBlur` in `src/mask/render.ts`); the number of halving steps comes from `blurRadius()`.
+  **Never use `ctx.filter = 'blur()'`**: WebKit/Safari renders canvas filter blur unreliably — it offsets the filtered layer by an amount that
+  grows with the radius, so large faces came out doubled/ghosted while small faces looked fine. Resampling is pixel-consistent across engines. Draw
+  the source into the tile with a margin around the Region so the blurred edge does not pick up transparent black.
+- The Region shape becomes an alpha mask (`applyShapeAlpha`): the shape is dilated outward by the feather radius and then softened with the same
+  `resampleBlur`, so the whole Region stays fully covered and the soft edge lies outside the box. Never blur the un-dilated shape: half the fade would eat into the Region and a
   strong mask would look like it covers only the centre. The same `maskPath()` helper is used by the live preview and by Export; they must never
   diverge.
 - Mask rendering must be identical in the on-screen preview and in the Export, except for scale. Implement it once against a `CanvasRenderingContext2D`

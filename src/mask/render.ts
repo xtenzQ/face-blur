@@ -11,12 +11,12 @@ export interface ViewTransform {
 
 export const IDENTITY_TRANSFORM: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
 
-const FALLBACK_BLUR_DOWNSCALE = 0.35;
 const BLUR_MARGIN_FACTOR = 2;
 const FEATHER_MARGIN_FACTOR = 3;
 const FEATHER_SIGMA_FACTOR = 0.5;
 const MASK_COLOR = '#fff';
-const NO_FILTER = 'none';
+const MIN_BLUR_PIXELS = 1;
+const MAX_DOWNSCALE_STEP = 2;
 
 type Canvas = OffscreenCanvas | HTMLCanvasElement;
 
@@ -39,12 +39,41 @@ export function maskPath(context: Context2D, region: Region, settings: MaskSetti
   }
 }
 
-function supportsCanvasFilter(context: Context2D): boolean {
-  return 'filter' in context;
-}
-
 function sizedCanvas(width: number, height: number): Canvas {
   return createCanvas(Math.max(1, Math.round(width)), Math.max(1, Math.round(height)));
+}
+
+function resizedCopy(source: Canvas, width: number, height: number): Canvas {
+  const copy = sizedCanvas(width, height);
+  const context = get2dContext(copy);
+  context.imageSmoothingEnabled = true;
+  context.drawImage(source, 0, 0, source.width, source.height, 0, 0, copy.width, copy.height);
+  return copy;
+}
+
+function resampleBlur(canvas: Canvas, radius: number): void {
+  if (radius < MIN_BLUR_PIXELS) {
+    return;
+  }
+  const targetWidth = Math.max(1, Math.round(canvas.width / radius));
+  const targetHeight = Math.max(1, Math.round(canvas.height / radius));
+  let scaled: Canvas = canvas;
+  while (scaled.width > targetWidth * MAX_DOWNSCALE_STEP && scaled.height > targetHeight * MAX_DOWNSCALE_STEP) {
+    scaled = resizedCopy(scaled, Math.round(scaled.width / MAX_DOWNSCALE_STEP), Math.round(scaled.height / MAX_DOWNSCALE_STEP));
+  }
+  if (scaled.width !== targetWidth || scaled.height !== targetHeight) {
+    scaled = resizedCopy(scaled, targetWidth, targetHeight);
+  }
+  if (scaled === canvas) {
+    return;
+  }
+  while (scaled.width * MAX_DOWNSCALE_STEP < canvas.width && scaled.height * MAX_DOWNSCALE_STEP < canvas.height) {
+    scaled = resizedCopy(scaled, scaled.width * MAX_DOWNSCALE_STEP, scaled.height * MAX_DOWNSCALE_STEP);
+  }
+  const context = get2dContext(canvas);
+  context.imageSmoothingEnabled = true;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(scaled, 0, 0, scaled.width, scaled.height, 0, 0, canvas.width, canvas.height);
 }
 
 function pixelatedTile(source: ImageSource, region: Box, area: Box, settings: MaskSettings, scale: number): Canvas {
@@ -61,19 +90,11 @@ function pixelatedTile(source: ImageSource, region: Box, area: Box, settings: Ma
 }
 
 function blurredTile(source: ImageSource, region: Box, area: Box, settings: MaskSettings, scale: number): Canvas {
-  const radius = blurRadius(region, settings.strength);
   const tile = sizedCanvas(area.w * scale, area.h * scale);
   const context = get2dContext(tile);
-  if (supportsCanvasFilter(context)) {
-    context.filter = `blur(${radius * scale}px)`;
-    context.drawImage(source, area.x, area.y, area.w, area.h, 0, 0, tile.width, tile.height);
-    context.filter = NO_FILTER;
-    return tile;
-  }
-  const small = sizedCanvas(tile.width * FALLBACK_BLUR_DOWNSCALE, tile.height * FALLBACK_BLUR_DOWNSCALE);
-  get2dContext(small).drawImage(source, area.x, area.y, area.w, area.h, 0, 0, small.width, small.height);
   context.imageSmoothingEnabled = true;
-  context.drawImage(small, 0, 0, tile.width, tile.height);
+  context.drawImage(source, area.x, area.y, area.w, area.h, 0, 0, tile.width, tile.height);
+  resampleBlur(tile, blurRadius(region, settings.strength) * scale);
   return tile;
 }
 
@@ -82,13 +103,10 @@ function applyShapeAlpha(tile: Canvas, region: Region, area: Box, settings: Mask
   const shapeContext = get2dContext(shape);
   const feather = featherRadius(region.box, settings.feather);
   const dilated = { ...region, box: expandBox(region.box, feather) };
-  if (feather > 0 && supportsCanvasFilter(shapeContext)) {
-    shapeContext.filter = `blur(${feather * FEATHER_SIGMA_FACTOR * scale}px)`;
-  }
   shapeContext.fillStyle = MASK_COLOR;
   maskPath(shapeContext, dilated, settings, { scale, offsetX: -area.x * scale, offsetY: -area.y * scale });
   shapeContext.fill();
-  shapeContext.filter = NO_FILTER;
+  resampleBlur(shape, feather * FEATHER_SIGMA_FACTOR * scale);
   const tileContext = get2dContext(tile);
   tileContext.globalCompositeOperation = 'destination-in';
   tileContext.drawImage(shape, 0, 0);

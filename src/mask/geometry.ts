@@ -3,8 +3,9 @@ import type { Box } from '../detect/types.ts';
 const MIN_BLOCKS_ACROSS = 4;
 const MAX_BLOCKS_ACROSS = 16;
 const MIN_BLOCK_SIZE = 2;
-const MIN_BLUR_RATIO = 0.04;
-const MAX_BLUR_RATIO = 0.2;
+const MIN_BLUR_RATIO = 0.012;
+const MAX_BLUR_RATIO = 0.22;
+const BLUR_STRENGTH_CURVE = 1.8;
 const MAX_FEATHER_RATIO = 0.15;
 const MAX_CORNER_RATIO = 0.5;
 
@@ -24,7 +25,8 @@ export function pixelBlockSize(box: Box, strength: number): number {
 }
 
 export function blurRadius(box: Box, strength: number): number {
-  return Math.max(1, lerp(MIN_BLUR_RATIO, MAX_BLUR_RATIO, strength) * shorterSide(box));
+  const eased = Math.pow(Math.min(1, Math.max(0, strength)), BLUR_STRENGTH_CURVE);
+  return Math.max(1, lerp(MIN_BLUR_RATIO, MAX_BLUR_RATIO, eased) * shorterSide(box));
 }
 
 export function featherRadius(box: Box, feather: number): number {
