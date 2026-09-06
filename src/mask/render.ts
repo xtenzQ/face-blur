@@ -16,6 +16,7 @@ const BLUR_MARGIN_FACTOR = 2;
 const FEATHER_MARGIN_FACTOR = 3;
 const FEATHER_SIGMA_FACTOR = 0.5;
 const MASK_COLOR = '#fff';
+const NO_FILTER = 'none';
 
 type Canvas = OffscreenCanvas | HTMLCanvasElement;
 
@@ -66,6 +67,7 @@ function blurredTile(source: ImageSource, region: Box, area: Box, settings: Mask
   if (supportsCanvasFilter(context)) {
     context.filter = `blur(${radius * scale}px)`;
     context.drawImage(source, area.x, area.y, area.w, area.h, 0, 0, tile.width, tile.height);
+    context.filter = NO_FILTER;
     return tile;
   }
   const small = sizedCanvas(tile.width * FALLBACK_BLUR_DOWNSCALE, tile.height * FALLBACK_BLUR_DOWNSCALE);
@@ -86,6 +88,7 @@ function applyShapeAlpha(tile: Canvas, region: Region, area: Box, settings: Mask
   shapeContext.fillStyle = MASK_COLOR;
   maskPath(shapeContext, dilated, settings, { scale, offsetX: -area.x * scale, offsetY: -area.y * scale });
   shapeContext.fill();
+  shapeContext.filter = NO_FILTER;
   const tileContext = get2dContext(tile);
   tileContext.globalCompositeOperation = 'destination-in';
   tileContext.drawImage(shape, 0, 0);

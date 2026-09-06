@@ -18,7 +18,8 @@ paths:
 
 - Pixelate = draw the Region into a small canvas (`imageSmoothingEnabled = true`), then back up with `imageSmoothingEnabled = false`. Block size
   comes from `pixelBlockSize()` in `src/mask/geometry.ts`, never a hardcoded pixel count, so it scales with the face size.
-- Blur = `ctx.filter = 'blur(Npx)'` where N comes from `blurRadius()`. Draw the source with a margin equal to the radius around the Region and
+- Blur = `ctx.filter = 'blur(Npx)'` where N comes from `blurRadius()`. **Reset `ctx.filter = 'none'` right after the draw**: a filter left on a
+  context also blurs the later `destination-in` mask composite, which made strong blurs come out translucent. Draw the source with a margin equal to the radius around the Region and
   clip, so the edge of the blur does not pick up transparent black.
 - The Region shape becomes an alpha mask (`applyShapeAlpha`): the shape is dilated outward by the feather radius and then blurred, so the whole
   Region stays fully covered and the soft edge lies outside the box. Never blur the un-dilated shape: half the fade would eat into the Region and a
