@@ -3,13 +3,14 @@ import type { Region } from '../domain/types.ts';
 import { get2dContext } from '../image/canvas-raster.ts';
 import { drawMaskedImage, maskPath, type ViewTransform } from '../mask/render.ts';
 import { addManualRegion, deleteRegion, redo, selectRegion, setPeeking, setRegionBox, toggleRegion, undo } from './actions.ts';
-import { currentPhoto, type AppState, type PhotoEntry, type Store } from './store.ts';
+import { currentPhoto, visibleRegions, type AppState, type PhotoEntry, type Store } from './store.ts';
 
 const HANDLE_SIZE_CSS = 10;
 const DRAG_THRESHOLD_CSS = 3;
 const MIN_REGION_SIDE = 6;
 const ENABLED_COLOR = '#22c55e';
-const DISABLED_COLOR = '#f59e0b';
+const DISABLED_COLOR = '#9aa3b5';
+const SUGGESTION_COLOR = '#f59e0b';
 const SELECTED_COLOR = '#ffffff';
 const DRAFT_COLOR = '#93c5fd';
 const DASH_CSS = [6, 4];
@@ -145,7 +146,7 @@ export function mountEditor(root: HTMLElement, store: Store<AppState>): void {
     maskPath(context, region, state.settings.mask, view);
     context.lineWidth = (isSelected ? 3 : 2) * scale;
     context.setLineDash(region.enabled ? [] : DASH_CSS.map((dash) => dash * scale));
-    context.strokeStyle = region.enabled ? ENABLED_COLOR : DISABLED_COLOR;
+    context.strokeStyle = region.enabled ? ENABLED_COLOR : region.isSuggestion ? SUGGESTION_COLOR : DISABLED_COLOR;
     context.stroke();
     if (!isSelected) {
       return;
@@ -183,15 +184,16 @@ export function mountEditor(root: HTMLElement, store: Store<AppState>): void {
       return;
     }
     view = fitView(canvas.width, canvas.height, photo);
+    const regions = visibleRegions(photo, state);
     drawMaskedImage(context, {
       source: photo.image,
       width: photo.width,
       height: photo.height,
-      regions: state.isPeeking ? [] : photo.regions,
+      regions: state.isPeeking ? [] : regions,
       settings: state.settings.mask,
       view,
     });
-    for (const region of photo.regions) {
+    for (const region of regions) {
       strokeRegion(region, state, region.id === state.selectedRegionId);
     }
     if (interaction.kind === 'draw') {
@@ -219,7 +221,7 @@ export function mountEditor(root: HTMLElement, store: Store<AppState>): void {
       canvas.style.cursor = HANDLE_CURSORS[handle];
       return;
     }
-    canvas.style.cursor = regionAt(photo.regions, toImage(point, view)) ? 'move' : 'crosshair';
+    canvas.style.cursor = regionAt(visibleRegions(photo, state), toImage(point, view)) ? 'move' : 'crosshair';
   }
 
   canvas.addEventListener('pointerdown', (event) => {
@@ -238,7 +240,7 @@ export function mountEditor(root: HTMLElement, store: Store<AppState>): void {
       interaction = { kind: 'resize', regionId: selected.id, handle, origin: selected.box };
       return;
     }
-    const hit = regionAt(photo.regions, imagePoint);
+    const hit = regionAt(visibleRegions(photo, state), imagePoint);
     if (hit) {
       interaction = { kind: 'pending', regionId: hit.id, start: imagePoint, origin: hit.box };
       return;

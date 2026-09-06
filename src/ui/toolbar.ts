@@ -3,7 +3,7 @@ import { exportBatch, exportPhoto, type MetadataOutcome } from '../export/encode
 import { downloadBlob } from '../export/download.ts';
 import { t } from '../i18n/en.ts';
 import { WEAK_STRENGTH } from '../mask/geometry.ts';
-import { addFiles, clearPhotos, deleteRegion, notify, setRegionShape, updateSettings } from './actions.ts';
+import { addCenteredRegion, addFiles, clearPhotos, deleteRegion, notify, setRegionShape, updateSettings } from './actions.ts';
 import { currentPhoto, selectedRegion, type AppState, type Store } from './store.ts';
 
 const ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,.jpg,.jpeg,.png,.webp';
@@ -107,6 +107,19 @@ export function mountToolbar(root: HTMLElement, store: Store<AppState>): void {
   stripField.title = t.stripMetadataHint;
   const stripHint = element('p', 'field-hint', t.stripMetadataHint);
 
+  const addRegionButton = element('button', 'button', t.addRegion);
+  addRegionButton.type = 'button';
+  addRegionButton.addEventListener('click', () => addCenteredRegion(store));
+  const suggestionsField = element('label', 'field checkbox');
+  const suggestionsInput = element('input');
+  suggestionsInput.type = 'checkbox';
+  suggestionsInput.addEventListener('change', () => updateSettings(store, { showSuggestions: suggestionsInput.checked }));
+  const suggestionsLabel = element('span');
+  suggestionsField.append(suggestionsInput, suggestionsLabel);
+  suggestionsField.title = t.showSuggestionsHint;
+  const regionsPanel = element('section', 'panel');
+  regionsPanel.append(addRegionButton, suggestionsField);
+
   const regionPanel = element('section', 'panel region-panel');
   const regionTitle = element('h3', undefined, t.region);
   const regionLabel = element('p', 'field-hint');
@@ -151,7 +164,7 @@ export function mountToolbar(root: HTMLElement, store: Store<AppState>): void {
   const exportPanel = element('section', 'panel');
   exportPanel.append(stripField, stripHint, downloadButton, downloadAllButton, clearButton);
 
-  root.append(fileInput, addButton, modelNotice, maskPanel, regionPanel, exportPanel, notices, hints);
+  root.append(fileInput, addButton, modelNotice, maskPanel, regionsPanel, regionPanel, exportPanel, notices, hints);
 
   async function downloadCurrent(): Promise<void> {
     const state = store.get();
@@ -202,9 +215,17 @@ export function mountToolbar(root: HTMLElement, store: Store<AppState>): void {
     regionPanel.hidden = !region;
     if (region) {
       shapeControl.set(region.shape);
-      const sourceLabel = region.source === 'manual' ? t.manualLabel : t.detectedLabel(region.confidence ?? 0);
+      const confidence = region.confidence ?? 0;
+      const sourceLabel = region.source === 'manual' ? t.manualLabel : region.isSuggestion ? t.suggestionLabel(confidence) : t.detectedLabel(confidence);
       regionLabel.textContent = `${sourceLabel} · ${region.enabled ? t.regionOn : t.regionOff}`;
     }
+
+    const photo = currentPhoto(state);
+    const suggestionCount = photo?.regions.filter((entry) => entry.isSuggestion).length ?? 0;
+    regionsPanel.hidden = !photo;
+    suggestionsInput.checked = state.settings.showSuggestions;
+    suggestionsLabel.textContent = t.showSuggestions(suggestionCount);
+    suggestionsField.hidden = suggestionCount === 0 && !state.settings.showSuggestions;
 
     const hasPhotos = state.photos.length > 0;
     downloadButton.disabled = !currentPhoto(state) || state.isExporting;

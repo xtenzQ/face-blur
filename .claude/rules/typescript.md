@@ -35,6 +35,8 @@ When rules conflict, **Critical** rules take precedence.
   inside the editor renderer, never store screen coordinates.
 - Model inference goes through the `ModelRunner` interface and pixels through `RasterProvider`, so the same pipeline runs in the browser
   (onnxruntime-web + Canvas) and in Node tests (onnxruntime-node + sharp). Do not import `onnxruntime-web` outside `src/detect/browser-runner.ts`.
+- Regions from low-confidence Detections carry `isSuggestion: true` and are hidden unless `settings.showSuggestions` is on; every place that
+  renders, hit-tests or counts Regions must go through `visibleRegions()` so the two never disagree.
 - All user-visible strings live in `src/i18n/en.ts` and are read through `t()`. Never inline UI text.
 - Application state lives in the store in `src/ui/store.ts`; UI modules subscribe to it and render, they do not keep their own copies of Regions.
 

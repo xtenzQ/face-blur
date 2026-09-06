@@ -1,3 +1,4 @@
+import { isVisibleRegion } from '../domain/regions.ts';
 import type { MaskSettings, Region } from '../domain/types.ts';
 import type { PhotoKind } from '../image/load.ts';
 
@@ -21,6 +22,7 @@ export interface PhotoEntry {
 export interface Settings {
   mask: MaskSettings;
   stripMetadata: boolean;
+  showSuggestions: boolean;
 }
 
 export type ModelStatus = 'idle' | 'loading' | 'ready' | 'failed';
@@ -39,6 +41,7 @@ export interface AppState {
 export const DEFAULT_SETTINGS: Settings = {
   mask: { style: 'pixelate', strength: 0.6, feather: 0.2, cornerRadius: 0.2 },
   stripMetadata: false,
+  showSuggestions: false,
 };
 
 const SETTINGS_KEY = 'face-blur.settings';
@@ -53,6 +56,7 @@ export function loadSettings(): Settings {
     return {
       mask: { ...DEFAULT_SETTINGS.mask, ...parsed.mask },
       stripMetadata: parsed.stripMetadata ?? DEFAULT_SETTINGS.stripMetadata,
+      showSuggestions: parsed.showSuggestions ?? DEFAULT_SETTINGS.showSuggestions,
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -119,4 +123,8 @@ export function currentPhoto(state: AppState): PhotoEntry | null {
 export function selectedRegion(state: AppState): Region | null {
   const photo = currentPhoto(state);
   return photo?.regions.find((region) => region.id === state.selectedRegionId) ?? null;
+}
+
+export function visibleRegions(photo: PhotoEntry, state: AppState): Region[] {
+  return photo.regions.filter((region) => isVisibleRegion(region, state.settings.showSuggestions));
 }

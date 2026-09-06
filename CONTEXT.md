@@ -17,8 +17,12 @@ An area of a Photo that will be hidden on Export. Has a source: `detected` (prop
 _Avoid_: face, box, bbox, selection
 
 **Detection**:
-A face candidate produced by the detector, with a confidence score. Becomes a Region with source `detected`. A Detection below the confirmation threshold becomes a disabled Region shown as a suggestion.
+A face candidate produced by the detector, with a confidence score. Becomes a Region with source `detected`. A Detection below the confirmation threshold becomes a Suggestion.
 _Avoid_: prediction, result, hit
+
+**Suggestion**:
+A disabled Region created from a low-confidence Detection. Hidden by default; the user can reveal Suggestions and click one to turn it into an ordinary Region.
+_Avoid_: candidate, maybe-face, weak detection
 
 **Mask**:
 The way a Region's content is hidden: pixelate or blur. Mask settings are global for the Batch, never per Region.

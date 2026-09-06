@@ -9,6 +9,7 @@ export interface Region {
   shape: RegionShape;
   box: Box;
   enabled: boolean;
+  isSuggestion: boolean;
   confidence: number | null;
 }
 

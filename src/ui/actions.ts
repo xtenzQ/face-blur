@@ -1,5 +1,5 @@
 import type { Box } from '../detect/types.ts';
-import { manualRegion } from '../domain/regions.ts';
+import { centeredManualBox, manualRegion, toggledRegion } from '../domain/regions.ts';
 import type { Region, RegionShape } from '../domain/types.ts';
 import { t } from '../i18n/en.ts';
 import { kindOf, loadImage, releaseImage } from '../image/load.ts';
@@ -123,7 +123,7 @@ export function toggleRegion(store: Store<AppState>, regionId: string): void {
   if (!photo || !region) {
     return;
   }
-  commitRegions(store, replaceRegion(photo.regions, { ...region, enabled: !region.enabled }));
+  commitRegions(store, replaceRegion(photo.regions, toggledRegion(region)));
   selectRegion(store, regionId);
 }
 
@@ -158,6 +158,13 @@ export function addManualRegion(store: Store<AppState>, box: Box): void {
   const region = manualRegion(box);
   commitRegions(store, [...photo.regions, region]);
   selectRegion(store, region.id);
+}
+
+export function addCenteredRegion(store: Store<AppState>): void {
+  const photo = currentPhoto(store.get());
+  if (photo) {
+    addManualRegion(store, centeredManualBox(photo.width, photo.height));
+  }
 }
 
 export function deleteRegion(store: Store<AppState>, regionId: string): void {

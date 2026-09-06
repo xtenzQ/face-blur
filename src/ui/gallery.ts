@@ -1,8 +1,8 @@
 import { t } from '../i18n/en.ts';
 import { removePhoto, selectPhoto } from './actions.ts';
-import type { AppState, PhotoEntry, Store } from './store.ts';
+import { visibleRegions, type AppState, type PhotoEntry, type Store } from './store.ts';
 
-function statusText(photo: PhotoEntry): string {
+function statusText(photo: PhotoEntry, state: AppState): string {
   switch (photo.status) {
     case 'queued':
       return t.statusQueued;
@@ -11,17 +11,18 @@ function statusText(photo: PhotoEntry): string {
     case 'failed':
       return t.statusFailed;
     case 'ready':
-      return t.statusReady(photo.regions.filter((region) => region.enabled).length, photo.regions.length);
+      return t.statusReady(photo.regions.filter((region) => region.enabled).length, visibleRegions(photo, state).length);
   }
 }
 
 function signature(state: AppState): string {
   return state.photos
-    .map((photo) => `${photo.id}:${photo.status}:${photo.regions.length}:${photo.regions.filter((r) => r.enabled).length}:${photo.id === state.currentId ? 1 : 0}`)
+    .map((photo) => `${photo.id}:${photo.status}:${visibleRegions(photo, state).length}:${photo.regions.filter((r) => r.enabled).length}:${photo.id === state.currentId ? 1 : 0}`)
     .join('|');
 }
 
-function renderItem(photo: PhotoEntry, isCurrent: boolean, store: Store<AppState>): HTMLElement {
+function renderItem(photo: PhotoEntry, state: AppState, store: Store<AppState>): HTMLElement {
+  const isCurrent = photo.id === state.currentId;
   const item = document.createElement('button');
   item.type = 'button';
   item.className = `gallery-item${isCurrent ? ' is-current' : ''}`;
@@ -34,7 +35,7 @@ function renderItem(photo: PhotoEntry, isCurrent: boolean, store: Store<AppState
   name.textContent = photo.name;
   const status = document.createElement('span');
   status.className = `gallery-status is-${photo.status}`;
-  status.textContent = statusText(photo);
+  status.textContent = statusText(photo, state);
   const remove = document.createElement('span');
   remove.className = 'gallery-remove';
   remove.setAttribute('role', 'button');
@@ -57,7 +58,7 @@ export function mountGallery(root: HTMLElement, store: Store<AppState>): void {
       return;
     }
     lastSignature = next;
-    root.replaceChildren(...state.photos.map((photo) => renderItem(photo, photo.id === state.currentId, store)));
+    root.replaceChildren(...state.photos.map((photo) => renderItem(photo, state, store)));
     root.hidden = state.photos.length === 0;
   }
   store.subscribe(render);
