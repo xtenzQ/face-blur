@@ -1,0 +1,49 @@
+[
+  {
+    "file": "frontal.jpg",
+    "faces": 1,
+    "notes": "Frontal portrait, slight turn (~10 deg), eyeglasses, plain studio background. Sanity check."
+  },
+  {
+    "file": "profile-90.jpg",
+    "faces": 1,
+    "notes": "Strict side profile (~90 deg) facing right, beard, beanie covering hair/forehead, indoor low-contrast light."
+  },
+  {
+    "file": "three-quarter.jpg",
+    "faces": 1,
+    "notes": "Three-quarter view (~45 deg) turned to the viewer's right, slight head tilt, long hair partially covering one cheek."
+  },
+  {
+    "file": "tilted-head.jpg",
+    "faces": 1,
+    "notes": "Lying down, head rolled ~80-90 deg (face nearly horizontal), close-up, shallow depth of field, leaves partially over chin. KNOWN HARD for YuNet: the upright pass produces false positives around the face and only the 90-degree pass covers the whole face, as a candidate. The test asserts that some detection overlaps faceBox.",
+    "knownHard": true,
+    "faceBox": {
+      "x": 905,
+      "y": 357,
+      "w": 1372,
+      "h": 1179
+    }
+  },
+  {
+    "file": "occluded.jpg",
+    "faces": 1,
+    "notes": "Frontal close-up with strong partial occlusion: leaves cover the left eye, nose and part of the mouth; only right eye and lips clearly visible."
+  },
+  {
+    "file": "group-small-faces.jpg",
+    "faces": 8,
+    "notes": "Campfire group, 8 clearly visible faces of varying size: 2 strict profiles (left), 1 in sunglasses, several three-quarter, 1 small face at right partly covered by a hand. NOT counted: foreground man in grey cap seen from behind (only sunglasses edge), a person behind him showing only forehead/hair, and a cut-off hat at the far-left edge."
+  },
+  {
+    "file": "crowd-many-faces.jpg",
+    "faces": 18,
+    "notes": "Dense concert crowd, low light. 18 clearly visible faces (sizes from ~600 px to ~80 px), many partially occluded by raised arms/hands; several profiles. Roughly 10 further blurred/tiny background heads are ambiguous - treat the count as a minimum (>=18), not an exact match."
+  },
+  {
+    "file": "no-faces.jpg",
+    "faces": 0,
+    "notes": "Negative case: Matterhorn at sunset, no people at all."
+  }
+]
