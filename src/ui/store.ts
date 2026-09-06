@@ -37,7 +37,7 @@ export interface AppState {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  mask: { style: 'pixelate', strength: 0.6, feather: 0.3, cornerRadius: 0.2 },
+  mask: { style: 'pixelate', strength: 0.6, feather: 0.2, cornerRadius: 0.2 },
   stripMetadata: false,
 };
 

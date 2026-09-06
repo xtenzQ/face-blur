@@ -13,6 +13,8 @@ export const IDENTITY_TRANSFORM: ViewTransform = { scale: 1, offsetX: 0, offsetY
 
 const FALLBACK_BLUR_DOWNSCALE = 0.35;
 const BLUR_MARGIN_FACTOR = 2;
+const FEATHER_MARGIN_FACTOR = 3;
+const FEATHER_SIGMA_FACTOR = 0.5;
 const MASK_COLOR = '#fff';
 
 type Canvas = OffscreenCanvas | HTMLCanvasElement;
@@ -76,12 +78,13 @@ function blurredTile(source: ImageSource, region: Box, area: Box, settings: Mask
 function applyShapeAlpha(tile: Canvas, region: Region, area: Box, settings: MaskSettings, scale: number): void {
   const shape = sizedCanvas(tile.width, tile.height);
   const shapeContext = get2dContext(shape);
-  const feather = featherRadius(region.box, settings.feather) * scale;
+  const feather = featherRadius(region.box, settings.feather);
+  const dilated = { ...region, box: expandBox(region.box, feather) };
   if (feather > 0 && supportsCanvasFilter(shapeContext)) {
-    shapeContext.filter = `blur(${feather}px)`;
+    shapeContext.filter = `blur(${feather * FEATHER_SIGMA_FACTOR * scale}px)`;
   }
   shapeContext.fillStyle = MASK_COLOR;
-  maskPath(shapeContext, region, settings, { scale, offsetX: -area.x * scale, offsetY: -area.y * scale });
+  maskPath(shapeContext, dilated, settings, { scale, offsetX: -area.x * scale, offsetY: -area.y * scale });
   shapeContext.fill();
   const tileContext = get2dContext(tile);
   tileContext.globalCompositeOperation = 'destination-in';
@@ -91,7 +94,7 @@ function applyShapeAlpha(tile: Canvas, region: Region, area: Box, settings: Mask
 
 function maskMargin(region: Region, settings: MaskSettings): number {
   const blurMargin = settings.style === 'blur' ? blurRadius(region.box, settings.strength) * BLUR_MARGIN_FACTOR : 0;
-  return Math.ceil(blurMargin + featherRadius(region.box, settings.feather) * BLUR_MARGIN_FACTOR);
+  return Math.ceil(blurMargin + featherRadius(region.box, settings.feather) * FEATHER_MARGIN_FACTOR);
 }
 
 export function drawMask(context: Context2D, source: ImageSource, region: Region, settings: MaskSettings, view: ViewTransform): void {

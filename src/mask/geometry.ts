@@ -5,7 +5,7 @@ const MAX_BLOCKS_ACROSS = 16;
 const MIN_BLOCK_SIZE = 2;
 const MIN_BLUR_RATIO = 0.04;
 const MAX_BLUR_RATIO = 0.2;
-const MAX_FEATHER_RATIO = 0.2;
+const MAX_FEATHER_RATIO = 0.15;
 const MAX_CORNER_RATIO = 0.5;
 
 export const WEAK_STRENGTH = 0.4;

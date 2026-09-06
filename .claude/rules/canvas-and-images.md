@@ -20,8 +20,10 @@ paths:
   comes from `pixelBlockSize()` in `src/mask/geometry.ts`, never a hardcoded pixel count, so it scales with the face size.
 - Blur = `ctx.filter = 'blur(Npx)'` where N comes from `blurRadius()`. Draw the source with a margin equal to the radius around the Region and
   clip, so the edge of the blur does not pick up transparent black.
-- Clip with `ctx.clip()` on an ellipse or rect path built from the Region shape. The same `maskPath()` helper is used by the live preview and by
-  Export; they must never diverge.
+- The Region shape becomes an alpha mask (`applyShapeAlpha`): the shape is dilated outward by the feather radius and then blurred, so the whole
+  Region stays fully covered and the soft edge lies outside the box. Never blur the un-dilated shape: half the fade would eat into the Region and a
+  strong mask would look like it covers only the centre. The same `maskPath()` helper is used by the live preview and by Export; they must never
+  diverge.
 - Mask rendering must be identical in the on-screen preview and in the Export, except for scale. Implement it once against a `CanvasRenderingContext2D`
   and call it from both.
 
